@@ -28,4 +28,7 @@ jobs:
           npm install firebase-admin
 
       - name: Run auto-decline job
-        run: node autoDeclineRunner.js
+        run: |
+          echo "=== Starting Auto Decline Runner ==="
+          node --trace-uncaught autoDeclineRunner.js
+          echo "=== Auto Decline Runner Finished ==="
