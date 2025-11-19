@@ -2,8 +2,8 @@ name: Auto Decline Assignments
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes
-  workflow_dispatch:          # manual trigger if you want
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -23,7 +23,9 @@ jobs:
           echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT }}' > service-account.json
 
       - name: Install dependencies
-        run: npm install firebase-admin
+        run: |
+          npm init -y
+          npm install firebase-admin
 
       - name: Run auto-decline job
         run: node autoDeclineRunner.js
