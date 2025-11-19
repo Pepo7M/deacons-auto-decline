@@ -10,10 +10,10 @@ const autoDeclineAssignments = functions.https.onRequest(async (req, res) => {
 
   try {
     const snapshot = await db
-      .collection("ServiceAssignments")
-      .where("status", "==", "pending")
-      .where("expiresAt", "<=", now)
-      .get();
+        .collection("ServiceAssignments")
+        .where("status", "==", "pending")
+        .where("expiresAt", "<=", now)
+        .get();
 
     if (snapshot.empty) {
       console.log("👌 No expired invitations found.");
@@ -21,8 +21,7 @@ const autoDeclineAssignments = functions.https.onRequest(async (req, res) => {
     }
 
     const batch = db.batch();
-
-    snapshot.docs.forEach(doc => {
+    snapshot.docs.forEach((doc) => {
       batch.update(doc.ref, {
         status: "declined",
         respondedAt: now,
@@ -39,4 +38,4 @@ const autoDeclineAssignments = functions.https.onRequest(async (req, res) => {
   }
 });
 
-module.exports = { autoDeclineAssignments };
+module.exports = {autoDeclineAssignments};
