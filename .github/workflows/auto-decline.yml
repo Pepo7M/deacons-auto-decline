@@ -1,0 +1,31 @@
+name: Auto Decline Assignments
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Create service account file
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT }}' > service-account.json
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install firebase-admin
+
+      - name: Run auto-decline job
+        run: node autoDeclineRunner.js
