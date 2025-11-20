@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const sanityClient = require("@sanity/client");
+const { createClient } = require('@sanity/client');
 const serviceAccount = require("./service-account.json");
 
 // Initialize Firestore
@@ -9,11 +9,11 @@ admin.initializeApp({
 const db = admin.firestore();
 
 // Initialize Sanity
-const sanity = sanityClient({
+const sanity = createClient({
   projectId: "i6xlhwxc",   // ← replace with your project ID
   dataset: "production",
   token: process.env.SANITY_WRITE_TOKEN,
-  useCdn: true,
+  useCdn: false,
   apiVersion: "2023-05-03",
 });
 
