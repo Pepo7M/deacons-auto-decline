@@ -1,12 +1,21 @@
 const admin = require("firebase-admin");
-
+const sanityClient = require("@sanity/client");
 const serviceAccount = require("./service-account.json");
 
+// Initialize Firestore
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-
 const db = admin.firestore();
+
+// Initialize Sanity
+const sanity = sanityClient({
+  projectId: "i6xlhwxc",   // ← replace with your project ID
+  dataset: "production",
+  token: process.env.SANITY_WRITE_TOKEN,
+  useCdn: true,
+  apiVersion: "2023-05-03",
+});
 
 async function run() {
   const now = Date.now();
@@ -25,16 +34,32 @@ async function run() {
 
   const batch = db.batch();
 
-  snapshot.docs.forEach(doc => {
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const serviceId = data.serviceId; // Sanity service document ID
+
+    // 1️⃣ Firestore update
     batch.update(doc.ref, {
       status: "declined",
       autoDeclined: true,
-      respondedAt: now
+      respondedAt: now,
     });
-  });
+
+    // 2️⃣ Sanity update (option 2)
+    if (serviceId) {
+      await sanity.patch(serviceId)
+        .set({
+          noResponse: true,
+        })
+        .commit();
+
+      console.log(`📝 Updated Sanity service ${serviceId}`);
+    } else {
+      console.log(`⚠️ No serviceId in Firestore document: ${doc.id}`);
+    }
+  }
 
   await batch.commit();
-
   console.log(`🚫 Auto-declined ${snapshot.size} assignments`);
 }
 
