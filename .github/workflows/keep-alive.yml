@@ -1,0 +1,14 @@
+name: Keep GitHub Actions Active
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"   # Run once on the 1st day of every month at 00:00 UTC
+  workflow_dispatch:        # Allow manual run as well
+
+jobs:
+  keep_alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Keep the workflow alive
+        run: echo "🟢 GitHub Actions keep-alive executed on $(date)"
