@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm init -y
-          npm install firebase-admin @sanity/client node-fetch
+          npm install firebase-admin @sanity/client
 
       # 3️⃣ Run reassign.js script
       - name: Run reassignment script
