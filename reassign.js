@@ -10,7 +10,6 @@
  */
 
 const admin = require("firebase-admin");
-const fetch = require("node-fetch"); // fallback if Node < 18
 const { createClient } = require("@sanity/client");
 const serviceAccount = require("./service-account.json");
 
