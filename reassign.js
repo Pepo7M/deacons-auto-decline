@@ -211,6 +211,7 @@ async function reassignDeacon(assignmentDoc) {
     status: "pending",
     invitedAt: Date.now(),
     expiresAt: Date.now() + 48 * 60 * 60 * 1000,
+    reassigned: false,
   });
 
   console.log("📌 Firestore entry created:", newFSId);
