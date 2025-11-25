@@ -239,43 +239,75 @@ async function reassignDeacon(assignmentDoc) {
    (Matches old autoDeclineRunner.js + adds reassignment step)
 --------------------------------------------------------- */
 (async () => {
-  console.log("⏳ Checking for expired assignments...");
+  console.log("⏳ Checking for expired and declined assignments...");
 
   const now = Date.now();
 
-  const snapshot = await db
+  // 1️⃣ Auto-expired assignments (pending + past expiry)
+  const expired = await db
     .collection("ServiceAssignments")
     .where("status", "==", "pending")
     .where("expiresAt", "<=", now)
     .get();
 
-  if (snapshot.empty) {
-    console.log("✨ No expired assignments found.");
+  // 2️⃣ User-declined assignments (declined + not reassigned yet)
+  const declined = await db
+    .collection("ServiceAssignments")
+    .where("status", "==", "declined")
+    .where("reassigned", "==", false)
+    .get();
+
+  if (expired.empty && declined.empty) {
+    console.log("✨ No assignments to process.");
     return;
   }
 
-  console.log(`⚠ Found ${snapshot.size} expired assignments`);
+  console.log(`⚠ Found ${expired.size} expired, ${declined.size} declined assignments.`);
 
-  for (const doc of snapshot.docs) {
+  // Process auto-expired first
+  for (const doc of expired.docs) {
     const assignment = doc.data();
 
-    /* 🔥 1️⃣ Firestore: EXACT MATCH with autoDeclineRunner.js */
+    // 1️⃣ Mark as declined (just like old script)
     await doc.ref.update({
       status: "declined",
-      autoDeclined: true,
       respondedAt: now,
+      reassigned: false,  // important default
     });
 
-    /* 🔥 2️⃣ Sanity: EXACT MATCH with old script */
+    // 2️⃣ Mark Sanity record
     await sanityClient.patch(assignment.sanityDocId)
       .set({ noResponse: true })
       .commit();
 
-    console.log(`📝 Marked Sanity as noResponse: ${assignment.sanityDocId}`);
+    console.log(`📝 Sanity updated (auto-expired): ${assignment.sanityDocId}`);
 
-    /* 🔥 3️⃣ New: Reassign */
+    // 3️⃣ Reassign
     await reassignDeacon(doc);
+
+    // 4️⃣ Prevent reassigning twice
+    await doc.ref.update({ reassigned: true });
   }
 
-  console.log("🏁 Auto-decline + reassignment cycle complete.");
+  // Process user-declined
+  for (const doc of declined.docs) {
+    const assignment = doc.data();
+
+    console.log(`🙅 User-declined service: ${assignment.sanityDocId}`);
+
+    // 1️⃣ Sanity was already set to isRejected on app side, but ensure noResponse not set:
+    await sanityClient.patch(assignment.sanityDocId)
+      .set({ isRejected: true })
+      .commit();
+
+    // 2️⃣ Reassign
+    await reassignDeacon(doc);
+
+    // 3️⃣ Mark Firestore as processed
+    await doc.ref.update({ reassigned: true });
+
+    console.log(`🔁 Replacement issued for user-declined: ${assignment.sanityDocId}`);
+  }
+
+  console.log("🏁 All expired + declined assignments processed.");
 })();
