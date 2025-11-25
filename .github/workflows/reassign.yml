@@ -3,13 +3,14 @@ name: Auto Expire & Reassign
 on:
   schedule:
     - cron: "*/15 * * * *"   # Every 15 minutes
-  workflow_dispatch: {}      # Allows manual triggering
+  workflow_dispatch: {}       # Manual run
 
 jobs:
   reassign_job:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -18,6 +19,18 @@ jobs:
         with:
           node-version: "18"
 
+      # 1️⃣ Create service-account.json from GitHub Secrets
+      - name: Create service account file
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT }}' > ./service-account.json
+
+      # 2️⃣ Install required dependencies
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install firebase-admin @sanity/client node-fetch
+
+      # 3️⃣ Run reassign.js script
       - name: Run reassignment script
         env:
           SANITY_PROJECT_ID: ${{ secrets.SANITY_PROJECT_ID }}
