@@ -1,15 +1,16 @@
 /**
  * AUTOMATED REASSIGNMENT SCRIPT (ROOT VERSION)
- * - No npm install required
- * - Uses local service-account.json (same as your autoDeclineRunner.js)
- * - Sanity rotation preserved
- * - Rank + reading language filtering preserved
- * - Creates NEW Sanity doc for replacement
+ * - Matches autoDeclineRunner.js logic EXACTLY
+ * - Uses local service-account.json
+ * - Applies Sanity rotation
+ * - Filters by reading language + rank
+ * - Creates new Sanity service doc for replacement
+ * - Updates Firestore
  * - Sends push notifications
  */
 
 const admin = require("firebase-admin");
-const fetch = require("node-fetch"); // Node 18 has fetch, but safe fallback
+const fetch = require("node-fetch"); // fallback if Node < 18
 const { createClient } = require("@sanity/client");
 const serviceAccount = require("./service-account.json");
 
@@ -33,7 +34,7 @@ const sanityClient = createClient({
 });
 
 /* ---------------------------------------------------------
-   3️⃣ Your Rotation Function (unchanged)
+   3️⃣ Rotation function (from your original logic)
 --------------------------------------------------------- */
 const getFinalDeaconsArray = (mainArray, serviceArray, selectedRank) => {
   const remaining = mainArray.filter(
@@ -75,13 +76,13 @@ const getFinalDeaconsArray = (mainArray, serviceArray, selectedRank) => {
 };
 
 /* ---------------------------------------------------------
-   4️⃣ Core Replacement Logic
+   4️⃣ Reassignment logic
 --------------------------------------------------------- */
 async function reassignDeacon(assignmentDoc) {
   const assignment = assignmentDoc.data();
-  console.log("\n🔄 Processing reassignment for Sanity Document:", assignment.sanityDocId);
+  console.log("\n🔄 Reassigning service:", assignment.sanityDocId);
 
-  /* STEP 1 — Load ORIGINAL Sanity Service Document */
+  // STEP 1 — get original Sanity doc
   const original = await sanityClient.fetch(
     `*[_type=="service" && _id==$id][0]{
       serviceDate,
@@ -112,7 +113,7 @@ async function reassignDeacon(assignmentDoc) {
     deaconRank,
   } = original;
 
-  /* STEP 2 — Get ALL deacons */
+  // STEP 2 — load all deacons
   const allDeacons = await sanityClient.fetch(`
     *[_type == "deacon"]{
       _id,
@@ -126,7 +127,7 @@ async function reassignDeacon(assignmentDoc) {
     }
   `);
 
-  /* STEP 3 — Filter by SAME required Language */
+  // STEP 3 — filter by reading language
   const requiredLang = (language?.language || "").trim().toUpperCase();
 
   const eligibleByLanguage = allDeacons.filter((d) =>
@@ -138,7 +139,7 @@ async function reassignDeacon(assignmentDoc) {
     return;
   }
 
-  /* STEP 4 — Load Service History for Rotation */
+  // STEP 4 — retrieve service history for rotation
   const history = await sanityClient.fetch(`
     *[_type == "service"] | order(_createdAt asc){
       _createdAt,
@@ -146,7 +147,7 @@ async function reassignDeacon(assignmentDoc) {
     }
   `);
 
-  /* STEP 5 — Rank + Rotation Filtering */
+  // STEP 5 — rotation + rank filtering
   const nextList = getFinalDeaconsArray(
     eligibleByLanguage,
     history,
@@ -159,9 +160,9 @@ async function reassignDeacon(assignmentDoc) {
     return;
   }
 
-  console.log("👉 Replacement Selected:", nextDeacon.deaconName);
+  console.log("👉 Replacement selected:", nextDeacon.deaconName);
 
-  /* STEP 6 — Create NEW Sanity service document */
+  // STEP 6 — create NEW Sanity service doc
   const newDoc = await sanityClient.create({
     _type: "service",
 
@@ -190,9 +191,9 @@ async function reassignDeacon(assignmentDoc) {
     hasAttended: null,
   });
 
-  console.log("🆕 New Sanity Replacement Doc:", newDoc._id);
+  console.log("🆕 New replacement Sanity doc:", newDoc._id);
 
-  /* STEP 7 — Create Firestore Assignment for Replacement */
+  // STEP 7 — create Firestore assignment
   const newFSId = `${newDoc._id}_${nextDeacon._id}`;
 
   await db.collection("ServiceAssignments").doc(newFSId).set({
@@ -213,9 +214,9 @@ async function reassignDeacon(assignmentDoc) {
     expiresAt: Date.now() + 48 * 60 * 60 * 1000,
   });
 
-  console.log("📌 Firestore Assignment Created:", newFSId);
+  console.log("📌 Firestore entry created:", newFSId);
 
-  /* STEP 8 — Send Push Notification */
+  // STEP 8 — send push notification
   if (nextDeacon.expoPushToken) {
     await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
@@ -228,14 +229,15 @@ async function reassignDeacon(assignmentDoc) {
       }),
     });
 
-    console.log("📨 Notification sent to:", nextDeacon.deaconName);
+    console.log("📨 Push sent to:", nextDeacon.deaconName);
   }
 
-  console.log("✅ Reassignment Completed");
+  console.log("✅ Reassignment completed.");
 }
 
 /* ---------------------------------------------------------
-   5️⃣ MAIN EXECUTION (Called by GitHub Action)
+   5️⃣ MAIN SCRIPT — Auto-decline + Reassign
+   (Matches old autoDeclineRunner.js + adds reassignment step)
 --------------------------------------------------------- */
 (async () => {
   console.log("⏳ Checking for expired assignments...");
@@ -258,20 +260,23 @@ async function reassignDeacon(assignmentDoc) {
   for (const doc of snapshot.docs) {
     const assignment = doc.data();
 
-    /* 1️⃣ Update Firestore */
+    /* 🔥 1️⃣ Firestore: EXACT MATCH with autoDeclineRunner.js */
     await doc.ref.update({
-      status: "expired",
+      status: "declined",
+      autoDeclined: true,
       respondedAt: now,
     });
 
-    /* 2️⃣ Update Sanity doc */
+    /* 🔥 2️⃣ Sanity: EXACT MATCH with old script */
     await sanityClient.patch(assignment.sanityDocId)
       .set({ noResponse: true })
       .commit();
 
-    /* 3️⃣ Reassign */
+    console.log(`📝 Marked Sanity as noResponse: ${assignment.sanityDocId}`);
+
+    /* 🔥 3️⃣ New: Reassign */
     await reassignDeacon(doc);
   }
 
-  console.log("🏁 All reassignments processed.");
+  console.log("🏁 Auto-decline + reassignment cycle complete.");
 })();
