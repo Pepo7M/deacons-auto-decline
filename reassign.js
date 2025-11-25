@@ -289,25 +289,23 @@ async function reassignDeacon(assignmentDoc) {
     await doc.ref.update({ reassigned: true });
   }
 
-  // Process user-declined
-  for (const doc of declined.docs) {
-    const assignment = doc.data();
+  // 🔹 Process user-declined assignments
+for (const doc of declined.docs) {
+  const assignment = doc.data();
 
-    console.log(`🙅 User-declined service: ${assignment.sanityDocId}`);
+  console.log(`🙅 User-declined service: ${assignment.sanityDocId}`);
 
-    // 1️⃣ Sanity was already set to isRejected on app side, but ensure noResponse not set:
-    await sanityClient.patch(assignment.sanityDocId)
-      .set({ isRejected: true })
-      .commit();
+  // 1️⃣ Sanity is already updated by client-side logic.
+  console.log("ℹ️ Sanity already updated by client.");
 
-    // 2️⃣ Reassign
-    await reassignDeacon(doc);
+  // 2️⃣ Reassign
+  await reassignDeacon(doc);
 
-    // 3️⃣ Mark Firestore as processed
-    await doc.ref.update({ reassigned: true });
+  // 3️⃣ Mark Firestore as processed so we don't reassign twice
+  await doc.ref.update({ reassigned: true });
 
-    console.log(`🔁 Replacement issued for user-declined: ${assignment.sanityDocId}`);
-  }
+  console.log(`🔁 Replacement issued for user-declined: ${assignment.sanityDocId}`);
+}
 
   console.log("🏁 All expired + declined assignments processed.");
 })();
