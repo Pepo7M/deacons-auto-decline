@@ -79,7 +79,7 @@ const getFinalDeaconsArray = (mainArray, serviceArray, selectedRank) => {
 --------------------------------------------------------- */
 async function reassignDeacon(assignmentDoc) {
   const assignment = assignmentDoc.data();
-  console.log("\n🔄 Reassigning service:", assignment.sanityDocId);
+  console.log("\n🔄 Reassigning service:", assignment.serviceId);
 
   // STEP 1 — get original Sanity doc
   const original = await sanityClient.fetch(
@@ -94,11 +94,11 @@ async function reassignDeacon(assignmentDoc) {
       language->{ _id, language },
       deaconRank->{ _id, rankName }
     }`,
-    { id: assignment.sanityDocId }
+    { id: assignment.serviceId }
   );
 
   if (!original) {
-    console.log("❌ Original Sanity doc not found:", assignment.sanityDocId);
+    console.log("❌ Original Sanity doc not found:", assignment.serviceId);
     return;
   }
 
@@ -196,7 +196,7 @@ async function reassignDeacon(assignmentDoc) {
   const newFSId = `${newDoc._id}_${nextDeacon._id}`;
 
   await db.collection("ServiceAssignments").doc(newFSId).set({
-    sanityDocId: newDoc._id,
+    serviceId: newDoc._id,
     serviceDate,
 
     readingRefId: reading._id,
@@ -225,7 +225,7 @@ async function reassignDeacon(assignmentDoc) {
         to: nextDeacon.expoPushToken,
         title: "New Service Assignment",
         body: `You have been assigned a replacement service.`,
-        data: { sanityDocId: newDoc._id },
+        data: { serviceId: newDoc._id },
       }),
     });
 
@@ -277,11 +277,11 @@ async function reassignDeacon(assignmentDoc) {
     });
 
     // 2️⃣ Mark Sanity record
-    await sanityClient.patch(assignment.sanityDocId)
+    await sanityClient.patch(assignment.serviceId)
       .set({ noResponse: true })
       .commit();
 
-    console.log(`📝 Sanity updated (auto-expired): ${assignment.sanityDocId}`);
+    console.log(`📝 Sanity updated (auto-expired): ${assignment.serviceId}`);
 
     // 3️⃣ Reassign
     await reassignDeacon(doc);
@@ -294,7 +294,7 @@ async function reassignDeacon(assignmentDoc) {
 for (const doc of declined.docs) {
   const assignment = doc.data();
 
-  console.log(`🙅 User-declined service: ${assignment.sanityDocId}`);
+  console.log(`🙅 User-declined service: ${assignment.serviceId}`);
 
   // 1️⃣ Sanity is already updated by client-side logic.
   console.log("ℹ️ Sanity already updated by client.");
@@ -305,7 +305,7 @@ for (const doc of declined.docs) {
   // 3️⃣ Mark Firestore as processed so we don't reassign twice
   await doc.ref.update({ reassigned: true });
 
-  console.log(`🔁 Replacement issued for user-declined: ${assignment.sanityDocId}`);
+  console.log(`🔁 Replacement issued for user-declined: ${assignment.serviceId}`);
 }
 
   console.log("🏁 All expired + declined assignments processed.");
