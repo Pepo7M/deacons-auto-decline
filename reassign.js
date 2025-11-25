@@ -114,12 +114,12 @@ async function reassignDeacon(assignmentDoc) {
 
   // STEP 2 — load all deacons
   const allDeacons = await sanityClient.fetch(`
-    *[_type == "deacon"]{
+    *[_type == "deacons"]{
       _id,
       deaconName,
       email,
       phone,
-      language->{language},
+      readinglanguage->{language},
       deaconRank->{rankName},
       "rankId": deaconRank._ref,
     }
@@ -129,7 +129,7 @@ async function reassignDeacon(assignmentDoc) {
   const requiredLang = (language?.language || "").trim().toUpperCase();
 
   const eligibleByLanguage = allDeacons.filter((d) =>
-    (d.language?.language || "").trim().toUpperCase() === requiredLang
+    (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
   );
 
   if (eligibleByLanguage.length === 0) {
@@ -192,6 +192,10 @@ async function reassignDeacon(assignmentDoc) {
   console.log("🆕 New replacement Sanity doc:", newDoc._id);
 
   // STEP 7 — create Firestore assignment
+  // Fetch push token from Firestore users collection
+  const userDoc = await db.collection("users").doc(nextDeacon.email).get();
+  const expoPushToken = userDoc.exists ? userDoc.data().expoPushToken : null;
+   
   const newFSId = `${newDoc._id}_${nextDeacon._id}`;
 
   await db.collection("ServiceAssignments").doc(newFSId).set({
@@ -205,7 +209,7 @@ async function reassignDeacon(assignmentDoc) {
     deaconId: nextDeacon._id,
     deaconName: nextDeacon.deaconName,
     email: nextDeacon.email,
-    expoPushToken: nextDeacon.expoPushToken || null,
+    expoPushToken: expoPushToken,
 
     status: "pending",
     invitedAt: Date.now(),
@@ -216,12 +220,12 @@ async function reassignDeacon(assignmentDoc) {
   console.log("📌 Firestore entry created:", newFSId);
 
   // STEP 8 — send push notification
-  if (nextDeacon.expoPushToken) {
+  if (expoPushToken) {
     await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        to: nextDeacon.expoPushToken,
+        to: expoPushToken,
         title: "New Service Assignment",
         body: `You have been assigned a replacement service.`,
         data: { serviceId: newDoc._id },
