@@ -122,7 +122,6 @@ async function reassignDeacon(assignmentDoc) {
       language->{language},
       deaconRank->{rankName},
       "rankId": deaconRank._ref,
-      expoPushToken
     }
   `);
 
@@ -130,7 +129,7 @@ async function reassignDeacon(assignmentDoc) {
   const requiredLang = (language?.language || "").trim().toUpperCase();
 
   const eligibleByLanguage = allDeacons.filter((d) =>
-    (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
+    (d.language?.language || "").trim().toUpperCase() === requiredLang
   );
 
   if (eligibleByLanguage.length === 0) {
