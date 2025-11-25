@@ -119,7 +119,7 @@ async function reassignDeacon(assignmentDoc) {
       deaconName,
       email,
       phone,
-      readinglanguage,
+      language->{language},
       deaconRank->{rankName},
       "rankId": deaconRank._ref,
       expoPushToken
