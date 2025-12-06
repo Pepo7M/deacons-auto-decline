@@ -164,6 +164,8 @@ async function reassignDeacon(assignmentDoc) {
 
   console.log("👉 Replacement selected:", nextDeacon.deaconName);
 
+  const service = mergeEvent(mainEvent, subEvent, prayer)
+
   // STEP 6 — create NEW Sanity service doc
   const newDoc = await sanityClient.create({
     _type: "service",
@@ -206,11 +208,11 @@ async function reassignDeacon(assignmentDoc) {
   await db.collection("ServiceAssignments").doc(newFSId).set({
     serviceId: newDoc._id,
     serviceDate,
-
+    service,
     readingRefId: reading._id,
     languageRefId: language._id,
     rankFilter: deaconRank.rankName,
-
+    readingName: reading.readingName,
     deaconId: nextDeacon._id,
     deaconName: nextDeacon.deaconName,
     email: nextDeacon.email,
