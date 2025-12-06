@@ -86,10 +86,12 @@ async function reassignDeacon(assignmentDoc) {
     `*[_type=="service" && _id==$id][0]{
       serviceDate,
       serviceDay,
+      serviceMonth,
+      serviceYear,
       mainEvent,
       subEvent,
       prayer,
-
+      
       reading->{ _id, readingName },
       language->{ _id, language },
       deaconRank->{ _id, rankName }
@@ -104,6 +106,8 @@ async function reassignDeacon(assignmentDoc) {
 
   const {
     serviceDate,
+    serviceMonth,
+    serviceYear,
     mainEvent,
     subEvent,
     prayer,
@@ -168,7 +172,8 @@ async function reassignDeacon(assignmentDoc) {
     serviceDay: new Date(serviceDate).toLocaleDateString("en-US", {
       weekday: "long",
     }),
-
+    serviceMonth,
+    serviceYear,
     mainEvent,
     subEvent,
     prayer,
