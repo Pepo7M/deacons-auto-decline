@@ -33,6 +33,46 @@ const sanityClient = createClient({
 });
 
 /* ---------------------------------------------------------
+   3️⃣3️⃣ get service name to be displayed to the deacon
+--------------------------------------------------------- */
+const mergeEvent = (...strings) => {
+  const seenWords = new Set();
+  const resultPhrases = [];
+
+  const isNumericPhrase = (phrase) => /\d/.test(phrase);
+
+  strings.forEach(str => {
+    const phrases = str.split(" - ").map(p => p.trim());
+
+    phrases.forEach(phrase => {
+      if (isNumericPhrase(phrase)) {
+        // keep entire phrase like "9th Hour"
+        if (![...seenWords].includes(phrase)) {
+          resultPhrases.push(phrase);
+          seenWords.add(phrase); // mark whole phrase
+        }
+        return;
+      }
+
+      // otherwise split into words
+      const words = phrase.split(/\s+/);
+
+      // keep only new words, but preserve phrase structure
+      const newWords = words.filter(w => !seenWords.has(w));
+
+      // add the phrase only if it contributes NEW words
+      if (newWords.length > 0) {
+        resultPhrases.push(newWords.join(" "));
+        newWords.forEach(w => seenWords.add(w));
+      }
+    });
+  });
+
+  return resultPhrases.join(" - ");
+};
+
+
+/* ---------------------------------------------------------
    3️⃣ Rotation function (from your original logic)
 --------------------------------------------------------- */
 const getFinalDeaconsArray = (mainArray, serviceArray, selectedRank) => {
