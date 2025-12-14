@@ -236,6 +236,7 @@ async function reassignDeacon(assignmentDoc) {
     isRejected: null,
     noResponse: null,
     hasAttended: null,
+    assignedBy: "Automatically Re-assigned"
   });
 
   console.log("🆕 New replacement Sanity doc:", newDoc._id);
