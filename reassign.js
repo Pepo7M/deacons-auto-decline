@@ -9,6 +9,8 @@
  * - Sends push notifications
  */
 
+console.log("🔥 RUNNING ROOT reassign.js");
+
 const admin = require("firebase-admin");
 const { createClient } = require("@sanity/client");
 const serviceAccount = require("./service-account.json");
