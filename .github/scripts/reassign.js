@@ -5,6 +5,8 @@
  * Replacement based on SAME rank + SAME reading language
  */
 
+console.log("🔥 RUNNING github/scripts/reassign.js");
+
 const admin = require("firebase-admin");
 const fetch = require("node-fetch");
 const { createClient } = require("@sanity/client");
