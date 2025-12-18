@@ -276,9 +276,11 @@ async function reassignDeacon(assignmentDoc) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         to: expoPushToken,
-        title: "New Service Assignment",
-        body: `You have been assigned a replacement service.`,
-        data: { serviceId: newDoc._id },
+        title: "✝️ New Service Assignment",
+        body: `You have been assigned a new service.`,
+        data: { screen: 'Deacon', serviceId: newDoc._id },
+        priority: 'high',
+        sound: 'default'
       }),
     });
 
