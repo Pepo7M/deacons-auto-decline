@@ -278,7 +278,7 @@ async function reassignDeacon(assignmentDoc) {
         to: expoPushToken,
         title: "✝️ New Service Assignment",
         body: `You have been assigned a new service.`,
-        data: { screen: 'Deacon', serviceId: newDoc._id, deaconName: nextDeacon.deaconName },
+        data: { screen: 'Deacon', serviceId: newDoc._id, deaconId: nextDeacon._id },
         priority: 'high',
         sound: 'default'
       }),
