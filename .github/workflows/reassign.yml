@@ -2,8 +2,13 @@ name: Auto Expire & Reassign
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # Every 15 minutes
+    - cron: "0 * * * *"   # Every 1 hour
   workflow_dispatch: {}       # Manual run
+
+# Prevent multiple queued/running jobs
+concurrency:
+  group: auto-expire-reassign
+  cancel-in-progress: true
 
 jobs:
   reassign_job:
