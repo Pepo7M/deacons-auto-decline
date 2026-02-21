@@ -299,11 +299,23 @@ async function reassignDeacon(assignmentDoc) {
 
   const now = Date.now();
 
+   // ✅ Get TODAY in UTC (YYYY-MM-DD)
+  const nowUTC = new Date();
+  const todayUTC =
+    nowUTC.getUTCFullYear() +
+    "-" +
+    String(nowUTC.getUTCMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(nowUTC.getUTCDate()).padStart(2, "0");
+
+  console.log("🌍 UTC Today:", todayUTC);
+
   // 1️⃣ Auto-expired assignments (pending + past expiry)
   const expired = await db
     .collection("ServiceAssignments")
     .where("status", "==", "pending")
     .where("expiresAt", "<=", now)
+    .where("serviceDate", ">", todayUTC)
     .get();
 
   // 2️⃣ User-declined assignments (declined + not reassigned yet)
@@ -311,6 +323,7 @@ async function reassignDeacon(assignmentDoc) {
     .collection("ServiceAssignments")
     .where("status", "==", "declined")
     .where("reassigned", "==", false)
+    .where("serviceDate", ">", todayUTC)
     .get();
 
   if (expired.empty && declined.empty) {
