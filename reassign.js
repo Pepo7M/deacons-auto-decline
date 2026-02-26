@@ -34,6 +34,10 @@ const sanityClient = createClient({
   useCdn: false,
 });
 
+
+// ✅ Prevent assigning the same deacon more than once per script run
+const assignedThisRun = new Set();
+
 /* ---------------------------------------------------------
    3️⃣3️⃣ get service name to be displayed to the deacon
 --------------------------------------------------------- */
@@ -183,6 +187,16 @@ async function reassignDeacon(assignmentDoc) {
     return;
   }
 
+
+   // ✅ Exclude deacons already assigned earlier in this same script run
+   const eligibleByLanguageNotAssigned = eligibleByLanguage.filter(
+     (d) => !assignedThisRun.has(d._id)
+   );
+   if (eligibleByLanguageNotAssigned.length === 0) {
+     console.log("❌ All eligible deacons already assigned in this run for language:", requiredLang);
+     return;
+   }
+
   // STEP 4 — retrieve service history for rotation
   const history = await sanityClient.fetch(`
     *[_type == "service"] | order(_createdAt asc){
@@ -193,7 +207,7 @@ async function reassignDeacon(assignmentDoc) {
 
   // STEP 5 — rotation + rank filtering
   const nextList = getFinalDeaconsArray(
-    eligibleByLanguage,
+    eligibleByLanguageNotAssigned,
     history,
     deaconRank?.rankName || "Any"
   );
@@ -203,6 +217,10 @@ async function reassignDeacon(assignmentDoc) {
     console.log("❌ No eligible replacement found.");
     return;
   }
+
+ // ✅ Reserve this deacon so they can't be picked again in this script run
+ assignedThisRun.add(nextDeacon._id);
+
 
   console.log("👉 Replacement selected:", nextDeacon.deaconName);
 
