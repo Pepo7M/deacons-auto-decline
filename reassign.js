@@ -127,6 +127,9 @@ async function reassignDeacon(assignmentDoc) {
   const assignment = assignmentDoc.data();
   console.log("\n🔄 Reassigning service:", assignment.serviceId);
 
+   //get deacon's Id
+   const previousDeaconId = assignment.deaconId;
+
   // STEP 1 — get original Sanity doc
   const original = await sanityClient.fetch(
     `*[_type=="service" && _id==$id][0]{
@@ -180,7 +183,7 @@ async function reassignDeacon(assignmentDoc) {
 
   const eligibleByLanguage = allDeacons.filter((d) =>
     (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
-  );
+  ).filter((d) => d._id !== previousDeaconId);
 
   if (eligibleByLanguage.length === 0) {
     console.log("❌ No deacons match required language:", requiredLang);
@@ -188,14 +191,7 @@ async function reassignDeacon(assignmentDoc) {
   }
 
 
-   // ✅ Exclude deacons already assigned earlier in this same script run
-   const eligibleByLanguageNotAssigned = eligibleByLanguage.filter(
-     (d) => !assignedThisRun.has(d._id)
-   );
-   if (eligibleByLanguageNotAssigned.length === 0) {
-     console.log("❌ All eligible deacons already assigned in this run for language:", requiredLang);
-     return;
-   }
+
 
   // STEP 4 — retrieve service history for rotation
   const history = await sanityClient.fetch(`
@@ -207,12 +203,18 @@ async function reassignDeacon(assignmentDoc) {
 
   // STEP 5 — rotation + rank filtering
   const nextList = getFinalDeaconsArray(
-    eligibleByLanguageNotAssigned,
+    eligibleByLanguage,
     history,
     deaconRank?.rankName || "Any"
   );
 
-  const nextDeacon = nextList[0];
+   // ✅ Exclude deacons already assigned earlier in this same script run
+   const filteredNextList = nextList.filter(
+     (d) => !assignedThisRun.has(d._id)
+   );
+
+  const nextDeacon = filteredNextList[0];
+   
   if (!nextDeacon) {
     console.log("❌ No eligible replacement found.");
     return;
