@@ -263,8 +263,17 @@ async function reassignDeacon(assignmentDoc) {
 
   // STEP 7 — create Firestore assignment
   // Fetch push token from Firestore users collection
-  const userDoc = await db.collection("users").doc(nextDeacon.email).get();
-  const expoPushToken = userDoc.exists ? userDoc.data().expoPushToken : null;
+  const userSnapshot = await db
+  .collection("users")
+  .where("email", "==", nextDeacon.email.toLowerCase())
+  .limit(1)
+  .get();
+   
+   let expoPushToken = null;
+
+   if (!userSnapshot.empty) {
+     expoPushToken = userSnapshot.docs[0].data().expoPushToken || null;
+   }
    
   const newFSId = `${newDoc._id}_${nextDeacon._id}`;
 
