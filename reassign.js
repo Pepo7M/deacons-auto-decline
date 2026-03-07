@@ -81,43 +81,72 @@ const mergeEvent = (...strings) => {
 /* ---------------------------------------------------------
    3️⃣ Rotation function (from your original logic)
 --------------------------------------------------------- */
-const getFinalDeaconsArray = (mainArray, serviceArray, selectedRank) => {
-  const remaining = mainArray.filter(
-    (d) => !serviceArray.some((sd) => sd.deaconName === d.deaconName)
+const getFinalDeaconsArray = (mainArray, serviceArray, selectedRanks) => {
+  // 1️⃣ Find deacons NOT in serviceArray (unserved)
+  let remaining = mainArray.filter(
+    d => !serviceArray.some(sd => sd.deaconName === d.deaconName)
   );
 
-  const shuffledRemaining = remaining.length > 0 ? [...remaining] : [...serviceArray];
+  // If Any was selected → bypass rank filtering logic later
+  const isAny = selectedRanks.includes("Any");
+
+  // 1️⃣➕ NEW LOGIC: Ensure each selected rank appears at least once in remaining
+  if (!isAny) {
+    // Find which selected ranks are missing in remaining
+    const missingRanks = selectedRanks.filter(
+      rank => !remaining.some(d => d.deaconRank.rankName === rank)
+    );
+
+    if (missingRanks.length > 0) {
+      // Add ALL deacons of missing ranks from mainArray
+      const toAdd = mainArray.filter(d =>
+        missingRanks.includes(d.deaconRank.rankName)
+      );
+
+      remaining = [...remaining, ...toAdd];
+    }
+  }
+
+  // 2️⃣ Shuffle the remaining ones (Fisher–Yates)
+  const shuffledRemaining = [...remaining];
   for (let i = shuffledRemaining.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffledRemaining[i], shuffledRemaining[j]] = [
       shuffledRemaining[j],
-      shuffledRemaining[i],
+      shuffledRemaining[i]
     ];
   }
 
+  // 3️⃣ Filter by selected ranks
   let shuffledAndRanked = [];
-  if (selectedRank === "Any") {
+  if (isAny) {
     shuffledAndRanked = [...shuffledRemaining];
   } else {
-    shuffledAndRanked = shuffledRemaining.filter(
-      (d) => d.deaconRank?.rankName === selectedRank
+    shuffledAndRanked = shuffledRemaining.filter(deacon =>
+      selectedRanks.includes(deacon.deaconRank.rankName)
     );
   }
 
-  const served = mainArray.filter((d) =>
-    serviceArray.some((sd) => sd.deaconName === d.deaconName)
+  console.log("shuffled", shuffledAndRanked.length);
+
+  // 4️⃣ Find served deacons
+  const findServed = mainArray.filter(d =>
+    serviceArray.some(sd => sd.deaconName === d.deaconName)
   );
 
-  let servedRanked = [];
-  if (selectedRank === "Any") {
-    servedRanked = [...served];
+  let servedList = [];
+  if (isAny) {
+    servedList = [...findServed];
   } else {
-    servedRanked = served.filter(
-      (d) => d.deaconRank?.rankName === selectedRank
+    servedList = findServed.filter(deacon =>
+      selectedRanks.includes(deacon.deaconRank.rankName)
     );
   }
 
-  return [...shuffledAndRanked, ...servedRanked];
+  // 5️⃣ Combine: unserved first (shuffled), then served
+  const finalDeacons = [...shuffledAndRanked, ...servedList];
+
+  return finalDeacons;
 };
 
 /* ---------------------------------------------------------
