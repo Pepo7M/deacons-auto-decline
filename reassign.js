@@ -234,7 +234,7 @@ async function reassignDeacon(assignmentDoc) {
   const nextList = getFinalDeaconsArray(
     eligibleByLanguage,
     history,
-    deaconRank?.rankName || "Any"
+    [deaconRank?.rankName || "Any"]
   );
 
    // ✅ Exclude deacons already assigned earlier in this same script run
