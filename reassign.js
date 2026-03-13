@@ -159,6 +159,16 @@ async function reassignDeacon(assignmentDoc) {
    //get deacon's Id
    const previousDeaconId = assignment.deaconId;
 
+   // 🔎 Get all previous invitations for this same reading
+   const previousAssignments = await db
+     .collection("ServiceAssignments")
+     .where("serviceDate", "==", assignment.serviceDate)
+     .get();
+   
+   const invitedToday = previousAssignments.docs.map(
+     d => d.data().deaconId
+   );
+
   // STEP 1 — get original Sanity doc
   const original = await sanityClient.fetch(
     `*[_type=="service" && _id==$id][0]{
@@ -212,9 +222,17 @@ async function reassignDeacon(assignmentDoc) {
 
   const eligibleByLanguage = allDeacons.filter((d) =>
     (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
-  ).filter((d) => d._id !== previousDeaconId);
+  )
+     // .filter((d) => d._id !== previousDeaconId);
+   let filtered = eligibleByLanguage.filter(
+     d => !invitedToday.includes(d._id)
+   );
 
-  if (eligibleByLanguage.length === 0) {
+   if (filtered.length === 0) {
+     filtered = eligibleByLanguage;
+   }
+
+  if (filtered.length === 0) {
     console.log("❌ No deacons match required language:", requiredLang);
     return;
   }
@@ -232,7 +250,7 @@ async function reassignDeacon(assignmentDoc) {
 
   // STEP 5 — rotation + rank filtering
   const nextList = getFinalDeaconsArray(
-    eligibleByLanguage,
+    filtered,
     history,
     [deaconRank?.rankName || "Any"]
   );
