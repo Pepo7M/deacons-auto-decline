@@ -201,6 +201,11 @@ async function reassignDeacon(assignmentDoc) {
     (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
   )
      // .filter((d) => d._id !== previousDeaconId);
+
+console.log("Required language for service:", requiredLang);
+console.log("All deacons languages:", allDeacons.map(d => d.readinglanguage?.language));
+console.log("Eligible by language:", eligibleByLanguage.map(d => d.deaconName));
+   
    let filtered = eligibleByLanguage.filter(
      d => !invitedToday.includes(d._id)
    );
