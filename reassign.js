@@ -84,6 +84,9 @@ const mergeEvent = (...strings) => {
 const getFinalDeaconsArray = (mainArray, serviceArray, selectedRanks) => {
     const isAny = selectedRanks.includes("Any");
 
+   console.log("selectedRanks: ", selectedRanks)
+   console.log("mainArray: ", mainArray.length)
+
   // 1️⃣ Filter by rank
   let eligibleDeacons = isAny
     ? [...mainArray]
