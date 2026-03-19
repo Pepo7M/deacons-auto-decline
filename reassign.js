@@ -242,7 +242,7 @@ async function reassignDeacon(assignmentDoc) {
 
   // STEP 4 — retrieve service history for rotation
   const history = await sanityClient.fetch(`
-    *[_type == "service"] | order(_createdAt asc){
+    *[_type == "service"] | order(serviceDate asc){
       _createdAt,
       deaconName
     }
