@@ -191,6 +191,9 @@ async function reassignDeacon(assignmentDoc) {
     }
   `);
 
+   const uniqueAllDeaconsRanks = [...new Set(allDeacons.map(d => d.deaconRank?.rankName))];
+   console.log("unique ranks in All Deacons:", uniqueAllDeaconsRanks);
+
   // STEP 3 — filter by reading language
   const requiredLang = (language?.language || "").trim().toUpperCase();
 
