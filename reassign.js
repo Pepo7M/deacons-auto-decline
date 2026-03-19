@@ -111,6 +111,10 @@ const getFinalDeaconsArray = (mainArray, serviceArray, selectedRanks) => {
     ...served
   ];
 
+   console.log("unserved:", unserved.length);
+   console.log("served:", served.length);
+   console.log("finalDeacons:", finalDeacons.length);
+
   return finalDeacons;
 };
 
