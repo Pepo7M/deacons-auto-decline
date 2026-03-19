@@ -203,12 +203,12 @@ async function reassignDeacon(assignmentDoc) {
      // .filter((d) => d._id !== previousDeaconId);
 
 console.log("Required language for service:", requiredLang);
-console.log("All deacons languages:", allDeacons.map(d => d.readinglanguage?.language));
-console.log("Eligible by language:", eligibleByLanguage.map(d => d.deaconName));
+console.log("Eligible by language:", [...new Set(eligibleByLanguage.map(d => d.deaconRank?.rankName))]);
    
    let filtered = eligibleByLanguage.filter(
      d => !invitedToday.includes(d._id)
    );
+   console.log("filtered:", [...new Set(filtered.map(d => d.deaconRank?.rankName))]);
 
    if (filtered.length === 0) {
      filtered = eligibleByLanguage;
