@@ -86,10 +86,8 @@ const getFinalDeaconsArray = (mainArray, serviceArray, selectedRanks) => {
 
    console.log("selectedRanks: ", selectedRanks)
    console.log("mainArray: ", mainArray.length)
-   console.log(
-  "mainArray ranks:",
-  mainArray.map(d => d.deaconRank?.rankName)
-);
+   const uniqueRanks = [...new Set(mainArray.map(d => d.deaconRank?.rankName))];
+   console.log("unique ranks in mainArray:", uniqueRanks);
 
   // 1️⃣ Filter by rank
   let eligibleDeacons = isAny
