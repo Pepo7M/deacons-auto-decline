@@ -191,20 +191,19 @@ async function reassignDeacon(assignmentDoc) {
     }
   `);
 
-   const uniqueAllDeaconsRanks = [...new Set(allDeacons.map(d => d.deaconRank?.rankName))];
-   console.log("unique ranks in All Deacons:", uniqueAllDeaconsRanks);
-
-  // STEP 3 — filter by reading language
-  const requiredLang = (language?.language || "").trim().toUpperCase();
-
-  const eligibleByLanguage = allDeacons.filter((d) =>
-    (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
-  )
-     // .filter((d) => d._id !== previousDeaconId);
-
-console.log("Required language for service:", requiredLang);
-console.log("Eligible by language:", [...new Set(eligibleByLanguage.map(d => d.deaconRank?.rankName))]);
+   // Check if this assignment is "Altar Service" based on reading name
+   const ignoreLanguage = reading?.readingName?.includes("Altar Service");
    
+   // Step 3 — filter eligible deacons
+   let eligibleByLanguage = allDeacons;
+   
+   if (!ignoreLanguage) {
+     const requiredLang = (language?.language || "").trim().toUpperCase();
+     eligibleByLanguage = allDeacons.filter((d) =>
+       (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
+     );
+   }
+      
    let filtered = eligibleByLanguage.filter(
      d => !invitedToday.includes(d._id)
    );
