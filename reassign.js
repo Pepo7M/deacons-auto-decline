@@ -145,7 +145,9 @@ const getFinalDeaconsArray = (mainArray, serviceArray, selectedRanks) => {
 
   // 5️⃣ Combine: unserved first (shuffled), then served
   const finalDeacons = [...shuffledAndRanked, ...servedList];
-
+   console.log("served list", servedList.length);
+   console.log("final list", finalDeacons.length);
+   
   return finalDeacons;
 };
 
