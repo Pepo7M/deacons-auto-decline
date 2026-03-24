@@ -38,6 +38,44 @@ const sanityClient = createClient({
 // ✅ Prevent assigning the same deacon more than once per script run
 const assignedThisRun = new Set();
 
+// ✅ helper functions for pascha psalm and gospel
+const getText = (item) =>
+  (
+    item?.title ||
+    item?.name ||
+    item?.readingName ||
+    item?.label ||
+    item?.type ||
+    ""
+  )
+    .toString()
+    .toLowerCase();
+
+const contains = (item, word) => getText(item).includes(word);
+
+const getCapabilityRequirement = (reading, mainEvent) => {
+  const event = (mainEvent || "").trim().toLowerCase();
+
+  if (event !== "pascha") return null;
+
+  if (contains(reading, "psalm")) {
+    return { type: "psalm", label: "Psalm-qualified" };
+  }
+
+  if (contains(reading, "gospel")) {
+    return { type: "gospel", label: "Gospel-qualified" };
+  }
+
+  return null;
+};
+
+const passesCapabilityRequirement = (deacon, requirement) => {
+  if (!requirement) return true;
+  if (requirement.type === "psalm") return !!deacon?.psalm;
+  if (requirement.type === "gospel") return !!deacon?.gospel;
+  return true;
+};
+
 /* ---------------------------------------------------------
    3️⃣3️⃣ get service name to be displayed to the deacon
 --------------------------------------------------------- */
@@ -185,6 +223,8 @@ async function reassignDeacon(assignmentDoc) {
       deaconName,
       email,
       phone,
+      psalm,
+      gospel,
       readinglanguage->{language},
       deaconRank->{rankName},
       "rankId": deaconRank._ref,
@@ -192,31 +232,63 @@ async function reassignDeacon(assignmentDoc) {
   `);
 
    // Check if this assignment is "Altar Service" based on reading name
-   const ignoreLanguage = reading?.readingName?.includes("Altar Service");
+   const isAltarService = (reading?.readingName || "").includes("Altar Service");
+   const capabilityRequirement = getCapabilityRequirement(reading, mainEvent);
    
-   // Step 3 — filter eligible deacons
+   // Ignore language for:
+   // 1) altar service
+   // 2) Pascha Psalm
+   // 3) Pascha Gospel
+   const ignoreLanguage = isAltarService || !!capabilityRequirement;
+   
+   const requiredLang = (language?.language || "").trim().toUpperCase();
+   
+   // Step 3A — language filter
    let eligibleByLanguage = allDeacons;
    
    if (!ignoreLanguage) {
-     const requiredLang = (language?.language || "").trim().toUpperCase();
-     eligibleByLanguage = allDeacons.filter((d) =>
-       (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
+     eligibleByLanguage = allDeacons.filter(
+       (d) =>
+         (d.readinglanguage?.language || "").trim().toUpperCase() === requiredLang
      );
    }
-      
-   let filtered = eligibleByLanguage.filter(
-     d => !invitedToday.includes(d._id)
+   
+   // Step 3B — capability filter
+   let eligibleAfterCapability = eligibleByLanguage.filter((d) =>
+     passesCapabilityRequirement(d, capabilityRequirement)
    );
-   console.log("filtered:", [...new Set(filtered.map(d => d.deaconRank?.rankName))]);
-
+   
+   // Step 3C — exclude already invited today
+   let filtered = eligibleAfterCapability.filter(
+     (d) => !invitedToday.includes(d._id)
+   );
+   
+   console.log("required language:", ignoreLanguage ? "IGNORED" : requiredLang);
+   console.log(
+     "required capability:",
+     capabilityRequirement ? capabilityRequirement.label : "None"
+   );
+   console.log(
+     "filtered ranks:",
+     [...new Set(filtered.map((d) => d.deaconRank?.rankName))]
+   );
+   
+   // Fallback: allow reuse of previously invited deacons,
+   // but still keep altar/Pascha filters
    if (filtered.length === 0) {
-     filtered = eligibleByLanguage;
+     filtered = [...eligibleAfterCapability];
    }
-
-  if (filtered.length === 0) {
-    console.log("❌ No deacons match required language:", requiredLang);
-    return;
-  }
+   
+   if (filtered.length === 0) {
+     console.log(
+       "❌ No deacons match filters:",
+       JSON.stringify({
+         requiredLang: ignoreLanguage ? null : requiredLang,
+         capability: capabilityRequirement?.label || null,
+       })
+     );
+     return;
+   }
 
 
 
@@ -240,16 +312,24 @@ async function reassignDeacon(assignmentDoc) {
    const filteredNextList = nextList.filter(
      (d) => !assignedThisRun.has(d._id)
    );
-
-  const nextDeacon = filteredNextList[0];
    
-  if (!nextDeacon) {
-    console.log("❌ No eligible replacement found.");
-    return;
-  }
-
- // ✅ Reserve this deacon so they can't be picked again in this script run
- assignedThisRun.add(nextDeacon._id);
+   // For Pascha Psalm/Gospel only:
+   // if no unused eligible deacons remain in this run,
+   // fall back to reusing already assigned eligible deacons
+   const canReuseWithinRun = !!capabilityRequirement;
+   
+   const nextDeacon =
+     filteredNextList[0] ||
+     (canReuseWithinRun ? nextList[0] : null);
+   
+   if (!nextDeacon) {
+     console.log("❌ No eligible replacement found.");
+     return;
+   }
+   
+   // Reserve only when first used;
+   // harmless if already present during reuse
+   assignedThisRun.add(nextDeacon._id);
 
 
   console.log("👉 Replacement selected:", nextDeacon.deaconName);
